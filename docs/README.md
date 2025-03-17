@@ -8,6 +8,15 @@ select * from 'hdfs://localhost:9000/path/to/file';
 
 ## Building & Loading the Extension
 
+### Requirement
+
+To build duckdb-hdfs, the following libraries are needed.
+
+    cmake (2.8+)                    http://www.cmake.org/
+    openssl(1.1.1w)                 https://www.openssl.org/
+    libhdfs3                        https://github.com/erikmuttersbach/libhdfs3/
+
+
 To build, type
 ```
 make

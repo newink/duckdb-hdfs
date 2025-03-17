@@ -2,6 +2,7 @@
 
 #include "duckdb.hpp"
 #include "hadoopfs.hpp"
+#include "easylogging++.h"
 
 namespace duckdb {
 
