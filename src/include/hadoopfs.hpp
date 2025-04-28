@@ -29,6 +29,23 @@ namespace duckdb
         bool shortcircuit;
         string domain_socket_path;
 
+        // Default constructor
+        HDFSParams()
+            : namenode("default"), url(""), ha_namenodes(), shortcircuit(false), domain_socket_path("") {}
+
+            HDFSParams(
+        string namenode_p,
+        string url_p,
+        vector<string> ha_namenodes_p,
+        bool shortcircuit_p,
+        string domain_socket_path_p)
+        : namenode(std::move(namenode_p)),
+          url(std::move(url_p)),
+          ha_namenodes(std::move(ha_namenodes_p)),
+          shortcircuit(shortcircuit_p),
+          domain_socket_path(std::move(domain_socket_path_p))
+            {}
+
         template <typename T>
         static HDFSParams ReadFrom(T &config)
         {
@@ -72,7 +89,7 @@ namespace duckdb
                 domain_socket_path = value.ToString();
             }
 
-            return {namenode, "", ha_namenodes, shortcircuit, domain_socket_path};
+            return HDFSParams(namenode, "", ha_namenodes, shortcircuit, domain_socket_path);
         }
         // static HDFSParams ReadFrom(DatabaseInstance &instance);
         // static HDFSParams ReadFrom(FileOpener *opener, FileOpenerInfo &info);
@@ -162,7 +179,7 @@ namespace duckdb
         friend class HadoopFileSystem;
 
     public:
-        HadoopFileHandle(FileSystem &fs, string path, uint8_t flags, hdfsFS hdfs);
+        HadoopFileHandle(FileSystem &fs, string path, FileOpenFlags flags, hdfsFS hdfs);;
         virtual ~HadoopFileHandle() override;
         // This two-phase construction allows subclasses more flexible setup.
         virtual void Initialize(FileOpener *opener);

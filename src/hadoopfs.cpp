@@ -11,6 +11,7 @@
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/main/database.hpp"
 #include "duckdb/main/extension_util.hpp"
+#include "duckdb/function/scalar/string_common.hpp"
 
 #include "hadoopfs_extension.hpp"
 #include "easylogging++.h"
@@ -267,7 +268,7 @@ namespace duckdb
     }
 
     HadoopFileHandle::HadoopFileHandle(FileSystem &fs, string path, FileOpenFlags flags, hdfsFS hdfs)
-        : FileHandle(fs, path), hdfs(hdfs), flags(flags), length(0)
+        : FileHandle(fs, path, flags), hdfs(hdfs), flags(flags), length(0)
     {
     }
 
@@ -360,7 +361,7 @@ namespace duckdb
                 }
                 return false;
             }
-            if (!LikeFun::Glob(key->data(), key->length(), pattern->data(), pattern->length()))
+            if (!duckdb::Glob(key->data(), key->length(), pattern->data(), pattern->length(), true))
             {
                 return false;
             }
@@ -674,7 +675,7 @@ namespace duckdb
         LOG(TRACE) << "Path: " << path;
         LOG(TRACE) << "Path Out: " << path_out;
         LOG(TRACE) << "Proto Host Port: " << proto_host_port;
-        hdfsFS fs = GetHadoopFileSystem(path, opener);
+        hdfsFS fs = GetHadoopFileSystem(path, opener.get());
         if (!fs)
         {
             throw IOException("Unable to connect to HDFS: " + proto_host_port);
