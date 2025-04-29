@@ -1,0 +1,72 @@
+FROM rockylinux:9 AS builder
+
+
+# Install build dependencies
+RUN dnf install -y epel-release dnf-plugins-core \
+    && dnf config-manager --set-enabled crb \
+    && dnf groupinstall -y "Development Tools" \
+    && dnf install --allowerasing -y \
+         cmake \
+         boost-devel \
+         protobuf-devel \
+         openssl-devel \
+         krb5-devel \
+         libxml2-devel \
+         libuuid-devel \
+         git \
+         curl \
+         autoconf \
+         automake \
+         libtool \
+         gettext \
+         ccache \
+    && dnf clean all
+
+# Install Node.js and Python3 via NodeSource to avoid epel conflicts (skip GPG check for NodeSource packages)
+RUN curl -fsSL https://rpm.nodesource.com/setup_16.x | bash - \
+    && dnf install -y --nogpgcheck nodejs python3 \
+    && dnf clean all
+
+# Use ccache for faster rebuilds
+ENV CC="ccache gcc" \
+    CXX="ccache g++" \
+    CCACHE_DIR="/root/.ccache" \
+    CCACHE_MAXSIZE=1G
+
+# Force the old ABI to ensure platform suffix _gcc4
+ENV CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" \
+    CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0"
+
+# Build and install GSASL from source
+WORKDIR /tmp
+RUN curl -LO https://ftp.gnu.org/gnu/gsasl/gsasl-1.10.0.tar.gz && \
+    tar xf gsasl-1.10.0.tar.gz && \
+    cd gsasl-1.10.0 && \
+    ./configure && \
+    make -j$(nproc) && \
+    make install && \
+    ldconfig
+
+# Build and install libhdfs3
+RUN git clone https://github.com/erikmuttersbach/libhdfs3.git && \
+    cd libhdfs3 && \
+    mkdir build && cd build && \
+    env CC=gcc CXX=g++ CFLAGS='' CXXFLAGS='' cmake .. \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DBUILD_TESTING=OFF \
+        -DBUILD_BENCHMARKS=OFF && \
+    make -j$(nproc) && \
+    make install
+
+WORKDIR /app
+
+# Copy the entire source tree
+COPY . .
+
+
+# Build the Node.js extension (static + loadable) via the Makefile
+RUN make -j release_js
+
+    # Default command
+CMD ["/bin/bash"]
